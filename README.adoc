@@ -1,0 +1,75 @@
+= Bridge Demo
+
+The purpose of this project is to demonstrate a natively compiled Java app where a bean's method parameters are always null regardless of what is passed.
+
+== Background
+
+Spring Cloud Task will emit messages to a stream (RabbitMQ Exchange, Kafka Topic) upon task startup and shutdown when the Spring Cloud Stream Starter is included in the dependencies.
+When using a traditional compilation or when Spring-AOT is enabled the application behaves as expected.   However, when the application is natively compiled
+the application throws an NPE.
+
+=== What is being observed
+In this sample you should see a `task-events` and `howdy` exchange created in RabbitMQ.  The `task-events` exchange should receive a `TaskExecution` message and the `howdy` exchange will receive a message of `hello`.
+In its current state you will see an NPE thrown https://github.com/spring-cloud/spring-cloud-function/blob/main/spring-cloud-function-context/src/main/java/org/springframework/cloud/function/cloudevent/CloudEventsFunctionInvocationHelper.java#L134-L138[here].
+This is because the `result` parameter is `null`.   However, when I checked the value for the `result` parameter prior to it be being called https://github.com/spring-cloud/spring-cloud-stream/blob/main/core/spring-cloud-stream/src/main/java/org/springframework/cloud/stream/function/StreamBridge.java#L239[here], the value was populated.
+
+However, if you disable the Spring Cloud Task event feature by setting `spring.cloud.task.events.enabled=false` in the jvm args at compile time, the `howdy` exchange is created and a message of `hello` is sent.
+
+
+== Requirements:
+
+* Java 17 or Above
+
+== Build:
+
+=== Traditional JVM Build
+[source,shell]
+----
+./mvnw clean package
+----
+
+=== Native Build
+[source,shell]
+----
+./mvnw -Pnative clean package
+----
+
+== Setup:
+You will need an instance of RabbitMQ running.   You can use the following to start a simple Rabbitmq instance.
+[source,shell]
+----
+docker run -d --hostname my-rabbit --name manager-rabbit -p 15672:15672 -p 5672:5672 rabbitmq:3-management
+----
+
+== Execution:
+
+=== Traditional Execution
+[source,shell]
+----
+java -jar target/bridgedemo-0.0.1-SNAPSHOT.jar
+----
+
+=== AOT Execution
+[source,shell]
+----
+java -Dspring.aot.enabled=true -jar target/bridgedemo-0.0.1-SNAPSHOT.jar
+----
+
+=== Native Execution
+[source,shell]
+----
+./target/bridgedemo
+----
+
+For example, you can listen for specific job-execution events on a specified channel with a Spring Cloud Stream Sink
+like the https://github.com/spring-cloud/stream-applications/tree/main/applications/sink/log-sink[log sink] using the following:
+
+[source,shell]
+----
+$ java -jar <PATH_TO_LOG_SINK_JAR>/log-sink-rabbit-3.1.1.jar --server.port=9090
+--spring.cloud.stream.bindings.input.destination=job-execution-events
+----
+
+== Dependencies:
+
+The batch-events sample requires an instance of RabbitMQ to be running.
