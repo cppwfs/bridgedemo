@@ -11,10 +11,12 @@ the application throws an NPE.
 === What is being observed
 In this sample you should see a `task-events` and `howdy` exchange created in RabbitMQ.  The `task-events` exchange should receive a `TaskExecution` message and the `howdy` exchange will receive a message of `hello`.
 In its current state you will see an NPE thrown https://github.com/spring-cloud/spring-cloud-function/blob/main/spring-cloud-function-context/src/main/java/org/springframework/cloud/function/cloudevent/CloudEventsFunctionInvocationHelper.java#L134-L138[here].
-This is because the `result` parameter is `null`.   However, when I checked the value for the `resultMessage` that is used for parameter `0` (`result`) prior to it be being called https://github.com/spring-cloud/spring-cloud-stream/blob/main/core/spring-cloud-stream/src/main/java/org/springframework/cloud/stream/function/StreamBridge.java#L239[here], the value was populated.
+This is because the `result` parameter is `null`.   However, when I checked the value for the `resultMessage` that is used for parameter `0` (`result`) prior to it be being called https://github.com/spring-cloud/spring-cloud-function/blob/main/spring-cloud-function-context/src/main/java/org/springframework/cloud/function/cloudevent/CloudEventsFunctionInvocationHelper.java#L114[here] then https://github.com/spring-cloud/spring-cloud-stream/blob/main/core/spring-cloud-stream/src/main/java/org/springframework/cloud/stream/function/StreamBridge.java#L239[here], the value was populated.
 
 However, if you disable the Spring Cloud Task event feature by setting `spring.cloud.task.events.enabled=false` in the jvm args at compile time, the `howdy` exchange is created and a message of `hello` is sent.    This can be done by uncommenting the following lines https://github.com/cppwfs/bridgedemo/blob/main/pom.xml#L79-L83[here] then natively compiling the sample.
 
+=== The question
+Why is the parameter being passed in `null` when nativily compiled but populated when the JVM and JVM+AOT are functioning?
 
 == Requirements:
 
